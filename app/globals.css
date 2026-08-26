@@ -1,0 +1,167 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 8 8 10;
+    --foreground: 244 244 245;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html,
+  body {
+    background-color: #070709;
+    color: #f3f3f6;
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: #c5a880;
+    color: #070709;
+  }
+}
+
+/* Luxury Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #09090c;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(197, 168, 128, 0.25);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(197, 168, 128, 0.5);
+}
+
+/* ========================================================================= */
+/* LIQUID GLASS DESIGN SYSTEM (Apple VisionOS / Luxury Frosted Liquid Glass) */
+/* ========================================================================= */
+
+.liquid-glass {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.04) 40%,
+    rgba(14, 15, 20, 0.65) 100%
+  );
+  backdrop-filter: blur(36px) saturate(220%) contrast(108%) brightness(108%);
+  -webkit-backdrop-filter: blur(36px) saturate(220%) contrast(108%) brightness(108%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 30px 60px -12px rgba(0, 0, 0, 0.75),
+    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 2px 0 rgba(0, 0, 0, 0.5),
+    0 0 25px 0 rgba(255, 255, 255, 0.04);
+}
+
+.liquid-glass-glow {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.05) 35%,
+    rgba(18, 20, 28, 0.72) 100%
+  );
+  backdrop-filter: blur(40px) saturate(240%) contrast(110%) brightness(112%);
+  -webkit-backdrop-filter: blur(40px) saturate(240%) contrast(110%) brightness(112%);
+  border: 1px solid rgba(216, 184, 141, 0.3);
+  box-shadow: 
+    0 35px 70px -10px rgba(0, 0, 0, 0.85),
+    0 0 35px 0 rgba(197, 168, 128, 0.18),
+    inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 2px 0 rgba(0, 0, 0, 0.6);
+}
+
+.liquid-glass-spot {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.18) 0%,
+    rgba(255, 255, 255, 0.06) 30%,
+    rgba(12, 13, 18, 0.78) 100%
+  );
+  backdrop-filter: blur(45px) saturate(250%) contrast(112%) brightness(115%);
+  -webkit-backdrop-filter: blur(45px) saturate(250%) contrast(112%) brightness(115%);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 
+    0 25px 60px -8px rgba(0, 0, 0, 0.9),
+    0 0 30px rgba(197, 168, 128, 0.22),
+    inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1.5px 2px 0 rgba(0, 0, 0, 0.7);
+}
+
+.liquid-glass-pill {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 
+    0 10px 25px rgba(0, 0, 0, 0.4),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+/* Backward compatibility classes with liquid glass upgrades */
+.glass-panel {
+  @apply liquid-glass;
+}
+
+.glass-panel-glow {
+  @apply liquid-glass-glow;
+}
+
+.glass-pill {
+  @apply liquid-glass-pill;
+}
+
+/* Metallic gradient text */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #f7ebd6 0%, #d8b88d 50%, #9f794d 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-silver-gradient {
+  background: linear-gradient(135deg, #ffffff 0%, #d1d5db 50%, #9ca3af 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-cyan-gradient {
+  background: linear-gradient(135deg, #e0f2fe 0%, #7dd3fc 50%, #0284c7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Background grid overlay */
+.bg-subtle-grid {
+  background-size: 60px 60px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+}
+
+/* Noise overlay for cinematic film grain */
+.bg-noise {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 0);
+  background-size: 24px 24px;
+}
