@@ -63,7 +63,7 @@ export default function ScrubExperience() {
 
   // Dedicated single-frame loader with GPU pre-decoding
   const fetchFrame = useCallback(
-    (src: string, targetArray: (HTMLImageElement | null)[], index: number): Promise<void> => {
+    (src: string, targetArray: (HTMLImageElement | null)[], index: number, priority: "high" | "auto" = "auto"): Promise<void> => {
       if (targetArray[index] || loadingSetRef.current.has(src)) {
         return Promise.resolve();
       }
@@ -71,6 +71,9 @@ export default function ScrubExperience() {
 
       return new Promise((resolve) => {
         const img = new Image();
+        if ("fetchPriority" in img) {
+          (img as unknown as { fetchPriority: string }).fetchPriority = priority;
+        }
         img.src = src;
         img.onload = async () => {
           try {
@@ -96,7 +99,42 @@ export default function ScrubExperience() {
     []
   );
 
-  // 100% Reliable Preload & Background Stream Pipeline
+  // Proximity Window Preloader: Bumps upcoming scroll frames to highest priority
+  const preloadSurroundingFrames = useCallback(
+    (stage: "f1" | "f2" | "f3", centerIdx: number) => {
+      const windowSize = 15;
+      if (stage === "f1") {
+        const start = Math.max(0, centerIdx - windowSize);
+        const end = Math.min(117, centerIdx + windowSize);
+        for (let i = start; i <= end; i++) {
+          if (!f1FramesRef.current[i]) {
+            fetchFrame(`/f1/frame_${String(i).padStart(6, "0")}.webp`, f1FramesRef.current, i, "high");
+          }
+        }
+      } else if (stage === "f2") {
+        const local = centerIdx - 118;
+        const start = Math.max(0, local - windowSize);
+        const end = Math.min(65, local + windowSize);
+        for (let i = start; i <= end; i++) {
+          if (!f2FramesRef.current[i]) {
+            fetchFrame(`/f2/frame_${String(118 + i).padStart(6, "0")}.webp`, f2FramesRef.current, i, "high");
+          }
+        }
+      } else if (stage === "f3") {
+        const local = centerIdx - 184;
+        const start = Math.max(0, local - windowSize);
+        const end = Math.min(116, local + windowSize);
+        for (let i = start; i <= end; i++) {
+          if (!f3FramesRef.current[i]) {
+            fetchFrame(`/f3/frame_${String(184 + i).padStart(6, "0")}.webp`, f3FramesRef.current, i, "high");
+          }
+        }
+      }
+    },
+    [fetchFrame]
+  );
+
+  // High-Performance Parallel Preload & Stream Pipeline
   useEffect(() => {
     let isMounted = true;
 
@@ -122,15 +160,28 @@ export default function ScrubExperience() {
         }
       };
 
-      // PHASE 1: Preload ALL 118 frames of Section 1 (f1) so hero scroll is 100% butter smooth
-      await fetchBatch(0, 118, "f1", f1FramesRef.current, 0, 8);
+      // 1. Initial critical preload: First 30 frames of f1 + first 10 frames of f2 & f3
+      const criticalBatch: Promise<void>[] = [];
+      for (let i = 0; i < 30; i++) {
+        criticalBatch.push(fetchFrame(`/f1/frame_${String(i).padStart(6, "0")}.webp`, f1FramesRef.current, i, "high"));
+      }
+      for (let i = 0; i < 10; i++) {
+        criticalBatch.push(fetchFrame(`/f2/frame_${String(118 + i).padStart(6, "0")}.webp`, f2FramesRef.current, i, "high"));
+        criticalBatch.push(fetchFrame(`/f3/frame_${String(184 + i).padStart(6, "0")}.webp`, f3FramesRef.current, i, "high"));
+      }
+      await Promise.all(criticalBatch);
+
+      // Finish remainder of f1 to reach 100% preloader
+      await fetchBatch(30, 118, "f1", f1FramesRef.current, 0, 8);
 
       if (!isMounted) return;
       setIsReady(true);
 
-      // PHASE 2: Immediately stream Section 2 (f2, 66 frames) and Section 3 (f3, 117 frames) in background
-      await fetchBatch(0, 66, "f2", f2FramesRef.current, 118, 8);
-      await fetchBatch(0, 117, "f3", f3FramesRef.current, 184, 8);
+      // 2. Stream f2 and f3 concurrently in parallel background workers
+      Promise.all([
+        fetchBatch(10, 66, "f2", f2FramesRef.current, 118, 6),
+        fetchBatch(10, 117, "f3", f3FramesRef.current, 184, 6),
+      ]);
     };
 
     runPipeline();
@@ -155,6 +206,7 @@ export default function ScrubExperience() {
         const calcFrame = Math.round(clampedProgress * 117);
         setF1Frame((prev) => (prev !== calcFrame ? calcFrame : prev));
         setF1Progress(clampedProgress);
+        preloadSurroundingFrames("f1", calcFrame);
       }
 
       // 2. Interpolate F2
@@ -165,6 +217,7 @@ export default function ScrubExperience() {
         const calcFrame = 118 + Math.round(clampedProgress * 65);
         setF2Frame((prev) => (prev !== calcFrame ? calcFrame : prev));
         setF2Progress(clampedProgress);
+        preloadSurroundingFrames("f2", calcFrame);
       }
 
       // 3. Interpolate F3
@@ -175,6 +228,7 @@ export default function ScrubExperience() {
         const calcFrame = 184 + Math.round(clampedProgress * 116);
         setF3Frame((prev) => (prev !== calcFrame ? calcFrame : prev));
         setF3Progress(clampedProgress);
+        preloadSurroundingFrames("f3", calcFrame);
       }
 
       animFrameId = requestAnimationFrame(updatePhysics);
@@ -183,7 +237,7 @@ export default function ScrubExperience() {
     animFrameId = requestAnimationFrame(updatePhysics);
 
     return () => cancelAnimationFrame(animFrameId);
-  }, []);
+  }, [preloadSurroundingFrames]);
 
   // Trigger horizontal transition forward to Section 2 (Knife)
   const triggerSlideToKnife = useCallback(() => {
@@ -191,6 +245,9 @@ export default function ScrubExperience() {
     isTransitioningRef.current = true;
     setCurrentStage("transition");
     setHorizontalOffset(-100);
+
+    // Preload start of f2 with high priority
+    preloadSurroundingFrames("f2", 118);
 
     setTimeout(() => {
       setCurrentStage("f2");
@@ -200,7 +257,7 @@ export default function ScrubExperience() {
       setF2Frame(118);
       isTransitioningRef.current = false;
     }, 750);
-  }, []);
+  }, [preloadSurroundingFrames]);
 
   // Trigger horizontal transition back to Section 1 (Whisk)
   const triggerSlideToWhisk = useCallback(() => {
@@ -208,6 +265,9 @@ export default function ScrubExperience() {
     isTransitioningRef.current = true;
     setCurrentStage("transition");
     setHorizontalOffset(0);
+
+    // Preload end of f1 with high priority
+    preloadSurroundingFrames("f1", 117);
 
     setTimeout(() => {
       setCurrentStage("f1");
@@ -217,7 +277,7 @@ export default function ScrubExperience() {
       setF1Frame(117);
       isTransitioningRef.current = false;
     }, 750);
-  }, []);
+  }, [preloadSurroundingFrames]);
 
   // Transition into F3 (Ensemble emerging from the middle)
   const triggerEmergeF3 = useCallback(() => {
@@ -226,7 +286,8 @@ export default function ScrubExperience() {
     currentF3ProgressRef.current = 0;
     setF3Progress(0);
     setF3Frame(184);
-  }, []);
+    preloadSurroundingFrames("f3", 184);
+  }, [preloadSurroundingFrames]);
 
   // Return back from F3 to F2
   const triggerReturnToF2 = useCallback(() => {
@@ -235,7 +296,8 @@ export default function ScrubExperience() {
     currentF2ProgressRef.current = 1;
     setF2Progress(1);
     setF2Frame(183);
-  }, []);
+    preloadSurroundingFrames("f2", 183);
+  }, [preloadSurroundingFrames]);
 
   // Handle stage jump directly from Navbar
   const handleJumpStage = useCallback((targetStage: "f1" | "f2" | "f3") => {
@@ -246,6 +308,7 @@ export default function ScrubExperience() {
       currentF1ProgressRef.current = 0;
       setF1Progress(0);
       setF1Frame(0);
+      preloadSurroundingFrames("f1", 0);
     } else if (targetStage === "f2") {
       setHorizontalOffset(-100);
       setCurrentStage("f2");
@@ -253,6 +316,7 @@ export default function ScrubExperience() {
       currentF2ProgressRef.current = 0;
       setF2Progress(0);
       setF2Frame(118);
+      preloadSurroundingFrames("f2", 118);
     } else if (targetStage === "f3") {
       setHorizontalOffset(-100);
       setCurrentStage("f3");
@@ -260,8 +324,9 @@ export default function ScrubExperience() {
       currentF3ProgressRef.current = 0;
       setF3Progress(0);
       setF3Frame(184);
+      preloadSurroundingFrames("f3", 184);
     }
-  }, []);
+  }, [preloadSurroundingFrames]);
 
   // Open Specs Drawer
   const handleOpenSpecs = (col: CollectionData = WHISK_COLLECTION) => {

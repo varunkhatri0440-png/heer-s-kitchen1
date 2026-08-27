@@ -17,24 +17,27 @@ export default function CanvasScrubber({
   className = "",
 }: CanvasScrubberProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const rafRef = useRef<number | null>(null);
   const lastRenderedImgRef = useRef<HTMLImageElement | null>(null);
-  const dimensionsRef = useRef<{
-    width: number;
-    height: number;
+
+  // Cached layout dimensions
+  const layoutRef = useRef<{
     dpr: number;
-    renderWidth: number;
-    renderHeight: number;
-    offsetX: number;
-    offsetY: number;
+    destX: number;
+    destY: number;
+    destW: number;
+    destH: number;
+    canvasW: number;
+    canvasH: number;
   }>({
-    width: 0,
-    height: 0,
     dpr: 1,
-    renderWidth: 0,
-    renderHeight: 0,
-    offsetX: 0,
-    offsetY: 0,
+    destX: 0,
+    destY: 0,
+    destW: 0,
+    destH: 0,
+    canvasW: 0,
+    canvasH: 0,
   });
 
   // Calculate layout geometry once on resize
@@ -48,17 +51,16 @@ export default function CanvasScrubber({
 
     if (displayWidth === 0 || displayHeight === 0) return;
 
-    const newCanvasW = Math.round(displayWidth * dpr);
-    const newCanvasH = Math.round(displayHeight * dpr);
+    const canvasW = Math.round(displayWidth * dpr);
+    const canvasH = Math.round(displayHeight * dpr);
 
-    if (canvas.width !== newCanvasW || canvas.height !== newCanvasH) {
-      canvas.width = newCanvasW;
-      canvas.height = newCanvasH;
+    if (canvas.width !== canvasW || canvas.height !== canvasH) {
+      canvas.width = canvasW;
+      canvas.height = canvasH;
     }
 
-    const imgWidth = 1920;
-    const imgHeight = 1080;
-    const imgRatio = imgWidth / imgHeight;
+    // Fixed aspect ratio (1920x1080 = 16:9)
+    const imgRatio = 1920 / 1080;
     const canvasRatio = displayWidth / displayHeight;
 
     let renderWidth = displayWidth;
@@ -76,14 +78,14 @@ export default function CanvasScrubber({
       offsetX = (displayWidth - renderWidth) / 2;
     }
 
-    dimensionsRef.current = {
-      width: displayWidth,
-      height: displayHeight,
+    layoutRef.current = {
       dpr,
-      renderWidth,
-      renderHeight,
-      offsetX,
-      offsetY,
+      destX: Math.round(offsetX * dpr),
+      destY: Math.round(offsetY * dpr),
+      destW: Math.round(renderWidth * dpr),
+      destH: Math.round(renderHeight * dpr),
+      canvasW,
+      canvasH,
     };
   }, []);
 
@@ -91,7 +93,11 @@ export default function CanvasScrubber({
   const drawCurrentFrame = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d", { alpha: false });
+
+    if (!ctxRef.current) {
+      ctxRef.current = canvas.getContext("2d", { alpha: false });
+    }
+    const ctx = ctxRef.current;
     if (!ctx) return;
 
     const localIndex = Math.max(0, currentFrame - startFrameOffset);
@@ -114,7 +120,7 @@ export default function CanvasScrubber({
       }
     }
 
-    // If still no frame in array, fallback to last rendered image
+    // Fallback to last rendered frame to guarantee no black or blank frames
     if (!img || !img.complete || img.naturalWidth === 0) {
       img = lastRenderedImgRef.current;
     }
@@ -123,19 +129,16 @@ export default function CanvasScrubber({
 
     lastRenderedImgRef.current = img;
 
-    const dim = dimensionsRef.current;
-    if (dim.width === 0 || dim.height === 0) {
+    const layout = layoutRef.current;
+    if (layout.canvasW === 0 || layout.canvasH === 0) {
       updateDimensions();
     }
 
-    const { dpr, renderWidth, renderHeight, offsetX, offsetY } = dimensionsRef.current;
+    const { destX, destY, destW, destH } = layoutRef.current;
 
-    ctx.save();
-    ctx.scale(dpr, dpr);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(img, offsetX, offsetY, renderWidth, renderHeight);
-    ctx.restore();
+    ctx.drawImage(img, destX, destY, destW, destH);
   }, [currentFrame, startFrameOffset, framesArray, updateDimensions]);
 
   // Trigger draw on frame update
