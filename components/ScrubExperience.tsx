@@ -96,41 +96,20 @@ export default function ScrubExperience() {
     []
   );
 
-  // Preload & Background Stream Pipeline
+  // 100% Reliable Preload & Background Stream Pipeline
   useEffect(() => {
     let isMounted = true;
 
     const runPipeline = async () => {
-      // 1. Preload the first batch of f1 frames to allow immediate interaction
-      const initialF1Batch: Promise<void>[] = [];
-      for (let i = 0; i < 40; i++) {
-        initialF1Batch.push(
-          fetchFrame(`/f1/frame_${String(i).padStart(6, "0")}.webp`, f1FramesRef.current, i)
-        );
-      }
-      // Also pre-fetch first 5 frames of f2 and f3
-      for (let i = 0; i < 5; i++) {
-        initialF1Batch.push(
-          fetchFrame(`/f2/frame_${String(118 + i).padStart(6, "0")}.webp`, f2FramesRef.current, i)
-        );
-        initialF1Batch.push(
-          fetchFrame(`/f3/frame_${String(184 + i).padStart(6, "0")}.webp`, f3FramesRef.current, i)
-        );
-      }
-
-      await Promise.all(initialF1Batch);
-      if (!isMounted) return;
-      setIsReady(true);
-
-      // 2. Stream helper with concurrency = 6
-      const streamBatch = async (
+      // Helper for batched concurrent fetching
+      const fetchBatch = async (
         start: number,
         end: number,
         folder: string,
         targetArray: (HTMLImageElement | null)[],
-        offset: number
+        offset: number,
+        concurrency: number = 8
       ) => {
-        const concurrency = 6;
         for (let i = start; i < end; i += concurrency) {
           if (!isMounted) break;
           const chunk: Promise<void>[] = [];
@@ -143,12 +122,15 @@ export default function ScrubExperience() {
         }
       };
 
-      // Finish remainder of f1
-      await streamBatch(40, 118, "f1", f1FramesRef.current, 0);
-      // Stream f2
-      await streamBatch(5, 66, "f2", f2FramesRef.current, 118);
-      // Stream f3
-      await streamBatch(5, 117, "f3", f3FramesRef.current, 184);
+      // PHASE 1: Preload ALL 118 frames of Section 1 (f1) so hero scroll is 100% butter smooth
+      await fetchBatch(0, 118, "f1", f1FramesRef.current, 0, 8);
+
+      if (!isMounted) return;
+      setIsReady(true);
+
+      // PHASE 2: Immediately stream Section 2 (f2, 66 frames) and Section 3 (f3, 117 frames) in background
+      await fetchBatch(0, 66, "f2", f2FramesRef.current, 118, 8);
+      await fetchBatch(0, 117, "f3", f3FramesRef.current, 184, 8);
     };
 
     runPipeline();
@@ -157,39 +139,6 @@ export default function ScrubExperience() {
       isMounted = false;
     };
   }, [fetchFrame]);
-
-  // Proximity Window Preloader: Bumps upcoming scroll frames to high priority
-  const preloadSurroundingFrames = useCallback(
-    (stage: "f1" | "f2" | "f3", centerIdx: number) => {
-      const windowSize = 12;
-      if (stage === "f1") {
-        const start = Math.max(0, centerIdx - windowSize);
-        const end = Math.min(117, centerIdx + windowSize);
-        for (let i = start; i <= end; i++) {
-          if (!f1FramesRef.current[i]) {
-            fetchFrame(`/f1/frame_${String(i).padStart(6, "0")}.webp`, f1FramesRef.current, i);
-          }
-        }
-      } else if (stage === "f2") {
-        const start = Math.max(0, centerIdx - 118 - windowSize);
-        const end = Math.min(65, centerIdx - 118 + windowSize);
-        for (let i = start; i <= end; i++) {
-          if (!f2FramesRef.current[i]) {
-            fetchFrame(`/f2/frame_${String(118 + i).padStart(6, "0")}.webp`, f2FramesRef.current, i);
-          }
-        }
-      } else if (stage === "f3") {
-        const start = Math.max(0, centerIdx - 184 - windowSize);
-        const end = Math.min(116, centerIdx - 184 + windowSize);
-        for (let i = start; i <= end; i++) {
-          if (!f3FramesRef.current[i]) {
-            fetchFrame(`/f3/frame_${String(184 + i).padStart(6, "0")}.webp`, f3FramesRef.current, i);
-          }
-        }
-      }
-    },
-    [fetchFrame]
-  );
 
   // Continuous 60/120fps RAF Linear Interpolation (LERP) Physics Loop
   useEffect(() => {
@@ -206,7 +155,6 @@ export default function ScrubExperience() {
         const calcFrame = Math.round(clampedProgress * 117);
         setF1Frame((prev) => (prev !== calcFrame ? calcFrame : prev));
         setF1Progress(clampedProgress);
-        preloadSurroundingFrames("f1", calcFrame);
       }
 
       // 2. Interpolate F2
@@ -217,7 +165,6 @@ export default function ScrubExperience() {
         const calcFrame = 118 + Math.round(clampedProgress * 65);
         setF2Frame((prev) => (prev !== calcFrame ? calcFrame : prev));
         setF2Progress(clampedProgress);
-        preloadSurroundingFrames("f2", calcFrame);
       }
 
       // 3. Interpolate F3
@@ -228,7 +175,6 @@ export default function ScrubExperience() {
         const calcFrame = 184 + Math.round(clampedProgress * 116);
         setF3Frame((prev) => (prev !== calcFrame ? calcFrame : prev));
         setF3Progress(clampedProgress);
-        preloadSurroundingFrames("f3", calcFrame);
       }
 
       animFrameId = requestAnimationFrame(updatePhysics);
@@ -237,7 +183,7 @@ export default function ScrubExperience() {
     animFrameId = requestAnimationFrame(updatePhysics);
 
     return () => cancelAnimationFrame(animFrameId);
-  }, [preloadSurroundingFrames]);
+  }, []);
 
   // Trigger horizontal transition forward to Section 2 (Knife)
   const triggerSlideToKnife = useCallback(() => {
