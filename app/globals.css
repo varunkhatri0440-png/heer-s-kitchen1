@@ -55,6 +55,8 @@
 /* LIQUID GLASS DESIGN SYSTEM (Apple VisionOS / Luxury Frosted Liquid Glass) */
 /* ========================================================================= */
 
+/* Glass class aliases */
+.glass-panel,
 .liquid-glass {
   background: linear-gradient(
     135deg,
@@ -72,6 +74,7 @@
     0 0 25px 0 rgba(255, 255, 255, 0.04);
 }
 
+.glass-panel-glow,
 .liquid-glass-glow {
   background: linear-gradient(
     135deg,
@@ -106,6 +109,7 @@
     inset 0 -1.5px 2px 0 rgba(0, 0, 0, 0.7);
 }
 
+.glass-pill,
 .liquid-glass-pill {
   background: linear-gradient(
     135deg,
@@ -120,35 +124,25 @@
     inset 0 1px 1px 0 rgba(255, 255, 255, 0.35);
 }
 
-/* Backward compatibility classes with liquid glass upgrades */
-.glass-panel {
-  @apply liquid-glass;
-}
-
-.glass-panel-glow {
-  @apply liquid-glass-glow;
-}
-
-.glass-pill {
-  @apply liquid-glass-pill;
-}
-
 /* Metallic gradient text */
 .text-gold-gradient {
   background: linear-gradient(135deg, #f7ebd6 0%, #d8b88d 50%, #9f794d 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .text-silver-gradient {
   background: linear-gradient(135deg, #ffffff 0%, #d1d5db 50%, #9ca3af 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .text-cyan-gradient {
   background: linear-gradient(135deg, #e0f2fe 0%, #7dd3fc 50%, #0284c7 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
