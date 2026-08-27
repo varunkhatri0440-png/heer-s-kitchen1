@@ -1,0 +1,9 @@
+# Cloudflare Pages Edge Caching Configuration
+/f1/*
+  Cache-Control: public, max-age=31536000, immutable
+/f2/*
+  Cache-Control: public, max-age=31536000, immutable
+/f3/*
+  Cache-Control: public, max-age=31536000, immutable
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
