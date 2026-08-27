@@ -23,6 +23,9 @@ export default function ScrubExperience() {
   const f2FramesRef = useRef<(HTMLImageElement | null)[]>(new Array(66).fill(null));
   const f3FramesRef = useRef<(HTMLImageElement | null)[]>(new Array(117).fill(null));
 
+  // Active loading set to avoid duplicate fetches
+  const loadingSetRef = useRef<Set<string>>(new Set());
+
   // Stages: 'f1' | 'transition' | 'f2' | 'f3'
   const [currentStage, setCurrentStage] = useState<"f1" | "transition" | "f2" | "f3">("f1");
 
@@ -61,109 +64,132 @@ export default function ScrubExperience() {
   const totalF3Frames = ENSEMBLE_COLLECTION.totalFrames; // 117
   const totalAllFrames = totalF1Frames + totalF2Frames + totalF3Frames; // 301
 
-  // Progressive Preload Engine with GPU pre-decode
-  useEffect(() => {
-    let isMounted = true;
-    let count = 0;
+  // Dedicated single-frame loader with GPU pre-decoding
+  const fetchFrame = useCallback(
+    (src: string, targetArray: (HTMLImageElement | null)[], index: number): Promise<void> => {
+      if (targetArray[index] || loadingSetRef.current.has(src)) {
+        return Promise.resolve();
+      }
+      loadingSetRef.current.add(src);
 
-    const loadAndDecodeFrame = (
-      src: string,
-      targetArray: (HTMLImageElement | null)[],
-      index: number
-    ): Promise<void> => {
       return new Promise((resolve) => {
         const img = new Image();
         img.src = src;
         img.onload = async () => {
-          if (!isMounted) return;
           try {
-            // Pre-decode into GPU memory for 0ms draw latency
             if ("decode" in img) {
               await img.decode().catch(() => {});
             }
-          } catch {
-            // Ignore decode failures on older engines
-          }
+          } catch {}
           targetArray[index] = img;
-          count++;
-          setLoadedCount(count);
+          setLoadedCount((prev) => prev + 1);
           resolve();
         };
         img.onerror = () => {
-          if (!isMounted) return;
-          count++;
-          setLoadedCount(count);
+          targetArray[index] = img;
+          setLoadedCount((prev) => prev + 1);
           resolve();
         };
       });
-    };
+    },
+    []
+  );
 
-    const preloadAll = async () => {
-      // 1. High priority: First 25 frames of each section for instant interaction
+  // High-performance Paced Preload Pipeline (Prevents Vercel network congestion)
+  useEffect(() => {
+    let isMounted = true;
+
+    const runPipeline = async () => {
+      // 1. Critical Phase: Load the first 35 frames of f1 & initial frames of f2/f3
       const priorityTasks: Promise<void>[] = [];
-      for (let i = 0; i < 25; i++) {
+      for (let i = 0; i < 35; i++) {
         priorityTasks.push(
-          loadAndDecodeFrame(
-            `/f1/frame_${String(i).padStart(6, "0")}.webp`,
-            f1FramesRef.current,
-            i
-          )
+          fetchFrame(`/f1/frame_${String(i).padStart(6, "0")}.webp`, f1FramesRef.current, i)
         );
       }
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < 15; i++) {
         priorityTasks.push(
-          loadAndDecodeFrame(
-            `/f2/frame_${String(118 + i).padStart(6, "0")}.webp`,
-            f2FramesRef.current,
-            i
-          )
+          fetchFrame(`/f2/frame_${String(118 + i).padStart(6, "0")}.webp`, f2FramesRef.current, i)
         );
       }
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < 15; i++) {
         priorityTasks.push(
-          loadAndDecodeFrame(
-            `/f3/frame_${String(184 + i).padStart(6, "0")}.webp`,
-            f3FramesRef.current,
-            i
-          )
+          fetchFrame(`/f3/frame_${String(184 + i).padStart(6, "0")}.webp`, f3FramesRef.current, i)
         );
       }
 
       await Promise.all(priorityTasks);
-      if (isMounted) {
-        setIsReady(true);
-      }
+      if (!isMounted) return;
+      setIsReady(true);
 
-      // 2. Stream load remainder in background chunks
-      for (let i = 25; i < 118; i++) {
-        loadAndDecodeFrame(
-          `/f1/frame_${String(i).padStart(6, "0")}.webp`,
-          f1FramesRef.current,
-          i
-        );
-      }
-      for (let i = 20; i < 66; i++) {
-        loadAndDecodeFrame(
-          `/f2/frame_${String(118 + i).padStart(6, "0")}.webp`,
-          f2FramesRef.current,
-          i
-        );
-      }
-      for (let i = 20; i < 117; i++) {
-        loadAndDecodeFrame(
-          `/f3/frame_${String(184 + i).padStart(6, "0")}.webp`,
-          f3FramesRef.current,
-          i
-        );
-      }
+      // 2. Controlled streaming worker with concurrency = 4 (prevents network queue stalling)
+      const streamFrames = async (
+        start: number,
+        end: number,
+        folder: string,
+        targetArray: (HTMLImageElement | null)[],
+        offset: number
+      ) => {
+        const concurrency = 4;
+        for (let i = start; i < end; i += concurrency) {
+          if (!isMounted) break;
+          const chunk: Promise<void>[] = [];
+          for (let j = i; j < Math.min(end, i + concurrency); j++) {
+            chunk.push(
+              fetchFrame(`/${folder}/frame_${String(offset + j).padStart(6, "0")}.webp`, targetArray, j)
+            );
+          }
+          await Promise.all(chunk);
+        }
+      };
+
+      // Stream remainder of f1
+      await streamFrames(35, 118, "f1", f1FramesRef.current, 0);
+      // Stream remainder of f2
+      await streamFrames(15, 66, "f2", f2FramesRef.current, 118);
+      // Stream remainder of f3
+      await streamFrames(15, 117, "f3", f3FramesRef.current, 184);
     };
 
-    preloadAll();
+    runPipeline();
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [fetchFrame]);
+
+  // Proximity Window Preloader: Bumps upcoming scroll frames to high priority
+  const preloadSurroundingFrames = useCallback(
+    (stage: "f1" | "f2" | "f3", centerIdx: number) => {
+      const windowSize = 10;
+      if (stage === "f1") {
+        const start = Math.max(0, centerIdx - windowSize);
+        const end = Math.min(117, centerIdx + windowSize);
+        for (let i = start; i <= end; i++) {
+          if (!f1FramesRef.current[i]) {
+            fetchFrame(`/f1/frame_${String(i).padStart(6, "0")}.webp`, f1FramesRef.current, i);
+          }
+        }
+      } else if (stage === "f2") {
+        const start = Math.max(0, centerIdx - 118 - windowSize);
+        const end = Math.min(65, centerIdx - 118 + windowSize);
+        for (let i = start; i <= end; i++) {
+          if (!f2FramesRef.current[i]) {
+            fetchFrame(`/f2/frame_${String(118 + i).padStart(6, "0")}.webp`, f2FramesRef.current, i);
+          }
+        }
+      } else if (stage === "f3") {
+        const start = Math.max(0, centerIdx - 184 - windowSize);
+        const end = Math.min(116, centerIdx - 184 + windowSize);
+        for (let i = start; i <= end; i++) {
+          if (!f3FramesRef.current[i]) {
+            fetchFrame(`/f3/frame_${String(184 + i).padStart(6, "0")}.webp`, f3FramesRef.current, i);
+          }
+        }
+      }
+    },
+    [fetchFrame]
+  );
 
   // Continuous 60/120fps RAF Linear Interpolation (LERP) Physics Loop
   useEffect(() => {
@@ -180,6 +206,7 @@ export default function ScrubExperience() {
         const calcFrame = Math.round(clampedProgress * 117);
         setF1Frame((prev) => (prev !== calcFrame ? calcFrame : prev));
         setF1Progress(clampedProgress);
+        preloadSurroundingFrames("f1", calcFrame);
       }
 
       // 2. Interpolate F2
@@ -190,6 +217,7 @@ export default function ScrubExperience() {
         const calcFrame = 118 + Math.round(clampedProgress * 65);
         setF2Frame((prev) => (prev !== calcFrame ? calcFrame : prev));
         setF2Progress(clampedProgress);
+        preloadSurroundingFrames("f2", calcFrame);
       }
 
       // 3. Interpolate F3
@@ -200,6 +228,7 @@ export default function ScrubExperience() {
         const calcFrame = 184 + Math.round(clampedProgress * 116);
         setF3Frame((prev) => (prev !== calcFrame ? calcFrame : prev));
         setF3Progress(clampedProgress);
+        preloadSurroundingFrames("f3", calcFrame);
       }
 
       animFrameId = requestAnimationFrame(updatePhysics);
@@ -208,7 +237,7 @@ export default function ScrubExperience() {
     animFrameId = requestAnimationFrame(updatePhysics);
 
     return () => cancelAnimationFrame(animFrameId);
-  }, []);
+  }, [preloadSurroundingFrames]);
 
   // Trigger horizontal transition forward to Section 2 (Knife)
   const triggerSlideToKnife = useCallback(() => {
