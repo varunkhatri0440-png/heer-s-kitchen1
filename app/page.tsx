@@ -1,3 +1,5 @@
+"use client";
+
 import ScrubExperience from "@/components/ScrubExperience";
 
 export default function Home() {
