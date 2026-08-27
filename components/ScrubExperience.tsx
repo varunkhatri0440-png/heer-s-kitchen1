@@ -196,7 +196,7 @@ export default function ScrubExperience() {
     let animFrameId: number;
 
     const updatePhysics = () => {
-      const lerpFactor = 0.12; // Responsive fluid momentum
+      const lerpFactor = 0.1; // Silky fluid momentum
 
       // 1. Interpolate F1
       const diffF1 = targetF1ProgressRef.current - currentF1ProgressRef.current;
@@ -344,7 +344,7 @@ export default function ScrubExperience() {
       if (isTransitioningRef.current) return;
 
       const delta = e.deltaY;
-      const sensitivity = 0.00075;
+      const sensitivity = 0.0005;
 
       if (currentStage === "f1") {
         if (delta > 0) {
