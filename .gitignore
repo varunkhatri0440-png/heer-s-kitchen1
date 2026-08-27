@@ -26,11 +26,6 @@ yarn-error.log*
 # local env files
 .env*.local
 
-# public generated asset links
-/public/f1
-/public/f2
-/public/f3
-
 # vercel
 .vercel
 

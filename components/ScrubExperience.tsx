@@ -14,8 +14,8 @@ import {
 } from "@/types/kitchenware";
 
 export default function ScrubExperience() {
-  // Loading & Cache state
-  const [loadedCount, setLoadedCount] = useState(0);
+  // Preloader tracking state
+  const [f1LoadedCount, setF1LoadedCount] = useState(0);
   const [isReady, setIsReady] = useState(false);
 
   // Arrays of loaded Image elements for O(1) instant memory lookup
@@ -60,9 +60,6 @@ export default function ScrubExperience() {
   const wheelAccumulatorRef = useRef(0);
 
   const totalF1Frames = WHISK_COLLECTION.totalFrames; // 118
-  const totalF2Frames = KNIFE_COLLECTION.totalFrames; // 66
-  const totalF3Frames = ENSEMBLE_COLLECTION.totalFrames; // 117
-  const totalAllFrames = totalF1Frames + totalF2Frames + totalF3Frames; // 301
 
   // Dedicated single-frame loader with GPU pre-decoding
   const fetchFrame = useCallback(
@@ -82,12 +79,16 @@ export default function ScrubExperience() {
             }
           } catch {}
           targetArray[index] = img;
-          setLoadedCount((prev) => prev + 1);
+          if (targetArray === f1FramesRef.current) {
+            setF1LoadedCount((prev) => prev + 1);
+          }
           resolve();
         };
         img.onerror = () => {
           targetArray[index] = img;
-          setLoadedCount((prev) => prev + 1);
+          if (targetArray === f1FramesRef.current) {
+            setF1LoadedCount((prev) => prev + 1);
+          }
           resolve();
         };
       });
@@ -95,42 +96,41 @@ export default function ScrubExperience() {
     []
   );
 
-  // High-performance Paced Preload Pipeline (Prevents Vercel network congestion)
+  // Preload & Background Stream Pipeline
   useEffect(() => {
     let isMounted = true;
 
     const runPipeline = async () => {
-      // 1. Critical Phase: Load the first 35 frames of f1 & initial frames of f2/f3
-      const priorityTasks: Promise<void>[] = [];
-      for (let i = 0; i < 35; i++) {
-        priorityTasks.push(
+      // 1. Preload the first batch of f1 frames to allow immediate interaction
+      const initialF1Batch: Promise<void>[] = [];
+      for (let i = 0; i < 40; i++) {
+        initialF1Batch.push(
           fetchFrame(`/f1/frame_${String(i).padStart(6, "0")}.webp`, f1FramesRef.current, i)
         );
       }
-      for (let i = 0; i < 15; i++) {
-        priorityTasks.push(
+      // Also pre-fetch first 5 frames of f2 and f3
+      for (let i = 0; i < 5; i++) {
+        initialF1Batch.push(
           fetchFrame(`/f2/frame_${String(118 + i).padStart(6, "0")}.webp`, f2FramesRef.current, i)
         );
-      }
-      for (let i = 0; i < 15; i++) {
-        priorityTasks.push(
+        initialF1Batch.push(
           fetchFrame(`/f3/frame_${String(184 + i).padStart(6, "0")}.webp`, f3FramesRef.current, i)
         );
       }
 
-      await Promise.all(priorityTasks);
+      await Promise.all(initialF1Batch);
       if (!isMounted) return;
       setIsReady(true);
 
-      // 2. Controlled streaming worker with concurrency = 4 (prevents network queue stalling)
-      const streamFrames = async (
+      // 2. Stream helper with concurrency = 6
+      const streamBatch = async (
         start: number,
         end: number,
         folder: string,
         targetArray: (HTMLImageElement | null)[],
         offset: number
       ) => {
-        const concurrency = 4;
+        const concurrency = 6;
         for (let i = start; i < end; i += concurrency) {
           if (!isMounted) break;
           const chunk: Promise<void>[] = [];
@@ -143,12 +143,12 @@ export default function ScrubExperience() {
         }
       };
 
-      // Stream remainder of f1
-      await streamFrames(35, 118, "f1", f1FramesRef.current, 0);
-      // Stream remainder of f2
-      await streamFrames(15, 66, "f2", f2FramesRef.current, 118);
-      // Stream remainder of f3
-      await streamFrames(15, 117, "f3", f3FramesRef.current, 184);
+      // Finish remainder of f1
+      await streamBatch(40, 118, "f1", f1FramesRef.current, 0);
+      // Stream f2
+      await streamBatch(5, 66, "f2", f2FramesRef.current, 118);
+      // Stream f3
+      await streamBatch(5, 117, "f3", f3FramesRef.current, 184);
     };
 
     runPipeline();
@@ -161,7 +161,7 @@ export default function ScrubExperience() {
   // Proximity Window Preloader: Bumps upcoming scroll frames to high priority
   const preloadSurroundingFrames = useCallback(
     (stage: "f1" | "f2" | "f3", centerIdx: number) => {
-      const windowSize = 10;
+      const windowSize = 12;
       if (stage === "f1") {
         const start = Math.max(0, centerIdx - windowSize);
         const end = Math.min(117, centerIdx + windowSize);
@@ -558,7 +558,7 @@ export default function ScrubExperience() {
       ? KNIFE_COLLECTION
       : WHISK_COLLECTION;
 
-  const loadingProgress = (loadedCount / totalAllFrames) * 100;
+  const loadingProgress = (f1LoadedCount / totalF1Frames) * 100;
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-[#070709] select-none">
@@ -566,8 +566,8 @@ export default function ScrubExperience() {
       <Preloader
         progress={loadingProgress}
         isReady={isReady}
-        totalFrames={totalAllFrames}
-        loadedFrames={loadedCount}
+        totalFrames={totalF1Frames}
+        loadedFrames={f1LoadedCount}
       />
 
       {/* Luxury Navigation Bar */}
