@@ -1,25 +1,27 @@
 "use client";
 
-import { Sparkles, ShoppingBag, SlidersHorizontal, ArrowUpRight } from "lucide-react";
+import { ShoppingBag, SlidersHorizontal } from "lucide-react";
 import { CollectionData } from "@/types/kitchenware";
 
 interface NavbarProps {
-  currentStage: "f1" | "transition" | "f2";
+  currentStage: "f1" | "transition" | "f2" | "f3";
   currentCollection: CollectionData;
   onOpenSpecs: () => void;
-  onJumpStage: (stage: "f1" | "f2") => void;
+  onJumpStage: (stage: "f1" | "f2" | "f3") => void;
 }
 
 export default function Navbar({
-  currentStage,
   currentCollection,
   onOpenSpecs,
   onJumpStage,
 }: NavbarProps) {
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 px-4 md:px-8 py-4 flex items-center justify-between pointer-events-none">
+    <header className="fixed top-0 left-0 right-0 z-40 px-4 md:px-8 py-4 flex items-center justify-between pointer-events-none select-none">
       {/* Brand Identity */}
-      <div className="flex items-center gap-3 pointer-events-auto group cursor-pointer" onClick={() => onJumpStage("f1")}>
+      <div
+        className="flex items-center gap-3 pointer-events-auto group cursor-pointer"
+        onClick={() => onJumpStage("f1")}
+      >
         <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-md shadow-lg group-hover:border-[#c5a880]/50 transition-all duration-300">
           <span className="font-serif font-bold text-lg text-gold-gradient">A</span>
         </div>
@@ -40,10 +42,9 @@ export default function Navbar({
 
       {/* Actions */}
       <div className="flex items-center gap-2.5 pointer-events-auto">
-
         <button
           onClick={onOpenSpecs}
-          className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-pill text-white/80 hover:text-white hover:border-[#c5a880]/40 transition-all text-xs font-mono tracking-wider uppercase"
+          className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full liquid-glass-pill text-white/80 hover:text-white hover:border-[#c5a880]/40 transition-all text-xs font-mono tracking-wider uppercase"
         >
           <SlidersHorizontal className="w-3.5 h-3.5 text-[#c5a880]" />
           <span>Specs & Lab</span>

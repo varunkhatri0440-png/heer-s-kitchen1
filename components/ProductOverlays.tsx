@@ -1,18 +1,10 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronDown,
   Sparkles,
   ArrowRight,
-  Shield,
-  Layers,
-  Flame,
-  Award,
-  Zap,
   ShoppingBag,
-  SlidersHorizontal,
-  Compass,
 } from "lucide-react";
 import { CollectionData } from "@/types/kitchenware";
 import ProductHotspot from "./ProductHotspot";

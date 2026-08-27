@@ -4,7 +4,7 @@ import { useEffect, useRef, useCallback } from "react";
 
 interface CanvasScrubberProps {
   currentFrame: number;
-  folder: "f1" | "f2" | "f3";
+  folder?: "f1" | "f2" | "f3";
   framesArray: (HTMLImageElement | null)[];
   startFrameOffset?: number; // e.g. 0 for f1, 118 for f2, 184 for f3
   className?: string;
@@ -12,7 +12,6 @@ interface CanvasScrubberProps {
 
 export default function CanvasScrubber({
   currentFrame,
-  folder,
   framesArray,
   startFrameOffset = 0,
   className = "",
@@ -92,7 +91,6 @@ export default function CanvasScrubber({
   const drawCurrentFrame = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    // Standard double-buffered 2D context (no desynchronized to eliminate black flashes)
     const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) return;
 
@@ -101,7 +99,6 @@ export default function CanvasScrubber({
 
     // If exact frame is still decoding/buffering, scan for nearest loaded frame
     if (!img || !img.complete || img.naturalWidth === 0) {
-      // Scan outward
       const maxScan = framesArray.length;
       for (let offset = 1; offset < maxScan; offset++) {
         const prev = framesArray[localIndex - offset];

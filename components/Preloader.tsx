@@ -1,7 +1,6 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, ShieldCheck } from "lucide-react";
 
 interface PreloaderProps {
   progress: number;
@@ -20,7 +19,7 @@ export default function Preloader({ progress, isReady, totalFrames, loadedFrames
           className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#070709] select-none pointer-events-auto"
         >
           {/* Ambient background glow */}
-          <div className="absolute w-[500px] h-[500px] bg-[#c5a880]/10 rounded-full blur-[120px] pointer-events-none animate-pulse-glow" />
+          <div className="absolute w-[500px] h-[500px] bg-[#c5a880]/10 rounded-full blur-[120px] pointer-events-none" />
           <div className="absolute w-[300px] h-[300px] bg-[#38bdf8]/10 rounded-full blur-[100px] pointer-events-none" />
 
           {/* Logo & Header */}

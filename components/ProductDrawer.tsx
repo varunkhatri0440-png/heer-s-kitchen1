@@ -7,11 +7,7 @@ import {
   ShieldCheck,
   Star,
   CheckCircle2,
-  Package,
-  Layers,
-  Sparkles,
   ShoppingBag,
-  ArrowRight,
   Flame,
   Droplets,
 } from "lucide-react";
@@ -249,7 +245,15 @@ export default function ProductDrawer({
                 ) : (
                   <>
                     <ShoppingBag className="w-4 h-4" />
-                    <span>Acquire {collection.id === "whisk" ? "Whisk Atelier Set" : "Hydro Chef Knife"} • {collection.price}</span>
+                    <span>
+                      Acquire{" "}
+                      {collection.id === "whisk"
+                        ? "Whisk Atelier Set"
+                        : collection.id === "knife"
+                        ? "Hydro Chef Knife"
+                        : "Grand Atelier Ensemble"}{" "}
+                      • {collection.price}
+                    </span>
                   </>
                 )}
               </button>

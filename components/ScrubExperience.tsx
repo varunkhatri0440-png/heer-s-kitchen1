@@ -543,7 +543,7 @@ export default function ScrubExperience() {
 
       {/* Luxury Navigation Bar */}
       <Navbar
-        currentStage={currentStage === "f3" ? "f2" : currentStage}
+        currentStage={currentStage}
         currentCollection={activeCollection}
         onOpenSpecs={() => handleOpenSpecs(activeCollection)}
         onJumpStage={handleJumpStage}
