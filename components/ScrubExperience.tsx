@@ -104,7 +104,7 @@ export default function ScrubExperience() {
       for (let i = 0; i < 25; i++) {
         priorityTasks.push(
           loadAndDecodeFrame(
-            `/f1/frame_${String(i).padStart(6, "0")}.png`,
+            `/f1/frame_${String(i).padStart(6, "0")}.webp`,
             f1FramesRef.current,
             i
           )
@@ -113,7 +113,7 @@ export default function ScrubExperience() {
       for (let i = 0; i < 20; i++) {
         priorityTasks.push(
           loadAndDecodeFrame(
-            `/f2/frame_${String(118 + i).padStart(6, "0")}.png`,
+            `/f2/frame_${String(118 + i).padStart(6, "0")}.webp`,
             f2FramesRef.current,
             i
           )
@@ -122,7 +122,7 @@ export default function ScrubExperience() {
       for (let i = 0; i < 20; i++) {
         priorityTasks.push(
           loadAndDecodeFrame(
-            `/f3/frame_${String(184 + i).padStart(6, "0")}.png`,
+            `/f3/frame_${String(184 + i).padStart(6, "0")}.webp`,
             f3FramesRef.current,
             i
           )
@@ -137,21 +137,21 @@ export default function ScrubExperience() {
       // 2. Stream load remainder in background chunks
       for (let i = 25; i < 118; i++) {
         loadAndDecodeFrame(
-          `/f1/frame_${String(i).padStart(6, "0")}.png`,
+          `/f1/frame_${String(i).padStart(6, "0")}.webp`,
           f1FramesRef.current,
           i
         );
       }
       for (let i = 20; i < 66; i++) {
         loadAndDecodeFrame(
-          `/f2/frame_${String(118 + i).padStart(6, "0")}.png`,
+          `/f2/frame_${String(118 + i).padStart(6, "0")}.webp`,
           f2FramesRef.current,
           i
         );
       }
       for (let i = 20; i < 117; i++) {
         loadAndDecodeFrame(
-          `/f3/frame_${String(184 + i).padStart(6, "0")}.png`,
+          `/f3/frame_${String(184 + i).padStart(6, "0")}.webp`,
           f3FramesRef.current,
           i
         );
